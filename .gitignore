@@ -15,3 +15,6 @@ __pycache__/
 # OS specific
 .DS_Store
 Thumbs.db
+
+.topcv_jobs_data_20250521_213822.json
+.topcv_selenium_page_20250521_213822.html
