@@ -16,5 +16,5 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-./home/kiet/gkinhere/project/config.py
-.env
+.topcv_jobs_data_20250521_213822.json
+.topcv_selenium_page_20250521_213822.html
