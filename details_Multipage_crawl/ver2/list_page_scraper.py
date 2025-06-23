@@ -1,5 +1,3 @@
-# list_page_scraper.py (VERSION 6 - Strictly Adhering to Original Logic)
-
 import os
 import time
 import random
@@ -16,7 +14,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 import undetected_chromedriver as uc
 
-# --- 1. Cấu hình (TUÂN THỦ 100% YÊU CẦU) ---
 load_dotenv()
 TARGET_URL_BASE = "https://www.topcv.vn"
 INITIAL_TARGET_URL = "https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2" 
