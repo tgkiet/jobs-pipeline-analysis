@@ -167,12 +167,5 @@ def main():
     if driver: driver.quit()
     print("=> Đã đóng kết nối DB và WebDriver.")
 
-
 if __name__ == "__main__":
     main()
-    
-    
-    
-    
-    
-    
