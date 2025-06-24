@@ -1,0 +1,232 @@
+# detail_worker_scraper.py (VERSION FINAL - USING YOUR ORIGINAL PARSERS)
+
+import os
+import re
+import time
+import random
+import json
+from datetime import datetime
+
+import psycopg2
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from psycopg2 import sql
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+import undetected_chromedriver as uc
+
+# --- 1. Cấu hình ---
+load_dotenv()
+DB_TABLE_NAME = 'topcv_jobs_detailed'
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+
+# --- 2. Các hàm Helper ---
+def get_db_connection():
+    # Giữ nguyên
+    try:
+        conn = psycopg2.connect(
+            dbname=os.getenv('DB_NAME'), user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'), host=os.getenv('DB_HOST', 'localhost'),
+            port=os.getenv('DB_PORT', '5432')
+        )
+        conn.autocommit = False
+        print("=> Kết nối Database thành công!")
+        return conn
+    except psycopg2.Error as e:
+        print(f"Lỗi kết nối Database: {e}")
+        return None
+
+def load_config(site_name="topcv"):
+    # Giữ nguyên
+    try:
+        with open('sites_config.json', 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        return config[site_name]
+    except (FileNotFoundError, KeyError):
+        print(f"Lỗi: Không tìm thấy file 'sites_config.json' hoặc không có cấu hình cho '{site_name}'.")
+        return None
+
+# *** 3. HOÀN TRẢ CÁC HÀM PARSE GỐC CỦA EM (TỪ NOTEBOOK) ***
+# Chúng ta sẽ sử dụng lại chính xác các hàm em đã viết, vì chúng đã được chứng minh là hoạt động tốt.
+
+def parse_company_info_from_detail(soup_detail):
+     # 100% code từ notebook gốc của em
+     company_info = {'company_name_detail': None, 'company_scale': None, 'company_field': None, 'company_full_address': None}
+     container = soup_detail.find("div", class_="job-detail__company--information")
+     if not container: return company_info
+     if name_tag := container.select_one("div.company-name-label a.name"): company_info['company_name_detail'] = name_tag.get_text(strip=True)
+     if scale_item := container.find("div", class_="company-scale"): 
+         if val_tag := scale_item.find("div", class_="company-value"): company_info['company_scale'] = val_tag.get_text(strip=True)
+     if field_item := container.find("div", class_="company-field"):
+         if val_tag := field_item.find("div", class_="company-value"): company_info['company_field'] = val_tag.get_text(strip=True)
+     if address_item := container.find("div", class_="company-address"):
+         if val_div := address_item.find("div", class_="company-value"):
+             company_info['company_full_address'] = val_div.get('data-original-title', val_div.get_text(strip=True))
+     return company_info
+
+def parse_general_job_info_from_detail(soup_detail):
+     # 100% code từ notebook gốc của em
+     general_info = {'job_level': None, 'education_level': None, 'quantity_needed': None, 'employment_type': None, 'gender_requirement': None}
+     box = soup_detail.find("div", class_="job-detail__body-right--box-general")
+     if not box: return general_info
+     for group in box.find_all("div", class_="box-general-group"):
+         if title_tag := group.find("div", class_="box-general-group-info-title"):
+             if value_tag := group.find("div", class_="box-general-group-info-value"):
+                 title, value = title_tag.get_text(strip=True), value_tag.get_text(strip=True)
+                 if "Cấp bậc" in title: general_info['job_level'] = value
+                 elif "Học vấn" in title: general_info['education_level'] = value
+                 elif "Số lượng tuyển" in title: general_info['quantity_needed'] = value 
+                 elif "Hình thức làm việc" in title: general_info['employment_type'] = value
+                 elif "Giới tính" in title: general_info['gender_requirement'] = value
+     return general_info
+
+def parse_skills_categories_from_detail(soup_detail):
+     # 100% code từ notebook gốc của em
+     skills_cats = {'related_job_categories': [], 'required_skills_tags': [], 'preferred_skills_tags': []}
+     container = soup_detail.find("div", class_="job-detail__body-right--box-category")
+     if not container: return skills_cats
+     for box in container.find_all("div", class_="box-category"):
+         if title_tag := box.find("div", class_="box-title"):
+             if tags_container := box.find("div", class_="box-category-tags"):
+                 title = title_tag.get_text(strip=True)
+                 if "Danh mục Nghề" in title or "Danh mục" in title: # Mở rộng để bắt cả 2 trường hợp
+                     skills_cats['related_job_categories'] = [a.get_text(strip=True) for a in tags_container.select("a.box-category-tag")]
+                 elif "Kỹ năng cần có" in title: 
+                     skills_cats['required_skills_tags'] = [s.get_text(strip=True) for s in tags_container.select("span.box-category-tag")]
+                 elif "Kỹ năng nên có" in title: 
+                     skills_cats['preferred_skills_tags'] = [s.get_text(strip=True) for s in tags_container.select("span.box-category-tag")]
+     return skills_cats
+
+def parse_job_content_from_detail(soup_detail):
+    # 100% code từ notebook gốc của em
+    content = {'job_description_text': None, 'job_requirements_text': None, 'job_benefits_text': None, 'working_time_text': None}
+    content_container = soup_detail.select_one("div.job-detail__information-detail--content div.job-description")
+    if not content_container: return content
+    for item in content_container.find_all("div", class_="job-description__item", recursive=False):
+        h3_tag = item.find("h3")
+        item_content_div = item.find("div", class_="job-description__item--content")
+        if h3_tag and item_content_div:
+            section_title = h3_tag.get_text(strip=True)
+            text_parts = []
+            if "Thời gian làm việc" in section_title:
+                list_items = item_content_div.find_all("div", class_="job-description__item--content-list")
+                if list_items:
+                    for li in list_items:
+                        if li_text := li.get_text(strip=True): text_parts.append(li_text)
+                elif item_content_div.get_text(strip=True): text_parts.append(item_content_div.get_text(strip=True))
+                content['working_time_text'] = "\n".join(text_parts) if text_parts else None
+            else:
+                for element in item_content_div.children:
+                    if isinstance(element, str) and element.strip(): text_parts.append(element.strip())
+                    elif element.name == 'p' and element.get_text(strip=True): text_parts.append(element.get_text(strip=True))
+                    elif element.name in ['ul', 'ol']:
+                        for li_tag in element.find_all('li', recursive=False): 
+                            if li_text_content := li_tag.get_text(strip=True): text_parts.append(f"- {li_text_content}")
+                section_text = "\n".join(text_parts) if text_parts else None
+                if "Mô tả công việc" in section_title: content['job_description_text'] = section_text
+                elif "Yêu cầu ứng viên" in section_title: content['job_requirements_text'] = section_text
+                elif "Quyền lợi" in section_title: content['job_benefits_text'] = section_text
+    return content
+
+def parse_application_deadline_from_detail(soup_detail):
+     # 100% code từ notebook gốc của em
+     if deadline_tag := soup_detail.find("div", class_="job-detail__information-detail--actions-label"):
+         if match := re.search(r'(\d{2}/\d{2}/\d{4})', deadline_tag.get_text(strip=True)):
+             return match.group(1)
+     return None
+
+# --- 4. Vòng lặp chính của Worker (ĐÃ SỬA LẠI ĐỂ DÙNG HÀM GỐC) ---
+def main_worker():
+    print("Bắt đầu Script 2 (Final - Original Parsers): Worker xử lý chi tiết job...")
+    
+    driver, conn = None, None
+    try:
+        options = uc.ChromeOptions(); options.add_argument(f'--user-agent={USER_AGENT}'); options.add_argument('--window-size=1920,1080')
+        driver = uc.Chrome(options=options)
+        conn = get_db_connection()
+        if not conn: return
+
+        while True:
+            cur = conn.cursor()
+            cur.execute(sql.SQL("SELECT job_id, job_url, source_site FROM {} WHERE status = 'pending_details' ORDER BY job_id LIMIT 1;").format(sql.Identifier(DB_TABLE_NAME)))
+            job_to_process = cur.fetchone()
+            cur.close()
+            
+            if not job_to_process:
+                print("Không còn job nào đang chờ. Tạm nghỉ 10 phút..."); time.sleep(600); continue
+            
+            job_id, detail_url, source_site = job_to_process
+            print(f"\n=> Đang xử lý Job ID: {job_id} | Site: {source_site} | URL: {detail_url[:70]}")
+
+            config = load_config(source_site)
+            if not config:
+                print(f"   [LỖI] Không có config cho site '{source_site}'."); # ... code xử lý lỗi config
+                continue
+            
+            if "/brand/" in detail_url:
+                print("   [BỎ QUA] Đây là trang 'brand'..."); # ... code bỏ qua trang brand
+                cur = conn.cursor()
+                cur.execute(sql.SQL("UPDATE {} SET status = %s WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME)), ('skipped_brand_page', job_id))
+                conn.commit()
+                cur.close()
+                time.sleep(1)
+                continue
+
+            try:
+                driver.get(detail_url)
+                WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, config['selectors']['detail_page']['wait_for_element'])))
+                time.sleep(random.uniform(3, 5))
+                soup_detail = BeautifulSoup(driver.page_source, 'html.parser')
+                
+                # *** GỌI CÁC HÀM PARSE GỐC CỦA EM ***
+                company_info = parse_company_info_from_detail(soup_detail)
+                general_info = parse_general_job_info_from_detail(soup_detail)
+                skills_cats = parse_skills_categories_from_detail(soup_detail)
+                content_info = parse_job_content_from_detail(soup_detail)
+                deadline_str = parse_application_deadline_from_detail(soup_detail)
+
+                # Tổng hợp dữ liệu từ các hàm riêng lẻ
+                update_data = {
+                    **company_info, **general_info, **skills_cats,
+                    **content_info, 'application_deadline_date': deadline_str,
+                    'status': 'completed'
+                }
+                
+                # Chuẩn bị để ghi vào DB (logic này không đổi)
+                set_clauses = sql.SQL(', ').join([sql.SQL("{} = %s").format(sql.Identifier(key)) for key in update_data.keys()])
+                values = list(update_data.values())
+                values.append(job_id)
+
+                update_query = sql.SQL("UPDATE {} SET {} WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME), set_clauses)
+                
+                cur = conn.cursor()
+                cur.execute(update_query, values)
+                conn.commit()
+                print(f"   [THÀNH CÔNG] Đã cập nhật chi tiết cho Job ID: {job_id}")
+
+            except Exception as e:
+                # Xử lý lỗi (logic này không đổi)
+                print(f"   [LỖI] Khi xử lý Job ID {job_id}: {e}")
+                conn.rollback()
+                cur = conn.cursor()
+                cur.execute(sql.SQL("UPDATE {} SET status = 'error' WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME)), (job_id,))
+                conn.commit()
+            
+            finally:
+                if 'cur' in locals() and not cur.closed:
+                    cur.close()
+
+            sleep_duration = random.uniform(25, 50)
+            print(f"   Nghỉ {sleep_duration:.1f} giây..."); time.sleep(sleep_duration)
+
+    except KeyboardInterrupt: print("\nĐã nhận lệnh dừng (Ctrl+C).")
+    except Exception as e: print(f"\nLỗi không xác định: {e}")
+    finally:
+        print("Đang dọn dẹp tài nguyên...")
+        if conn: conn.close()
+        if driver: driver.quit()
+
+if __name__ == "__main__":
+    main_worker()
