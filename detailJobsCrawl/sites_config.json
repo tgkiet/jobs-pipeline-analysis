@@ -1,0 +1,41 @@
+{
+  "topcv": {
+    "base_url": "https://www.topcv.vn",
+    "list_page_url": "https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2",
+    "selectors": {
+      "list_page": {
+        "job_item": "div.job-item-search-result",
+        "job_url": "h3.title a",
+        "job_title": "h3.title a",
+        "company_name": "a.company span.company-name",
+        "salary": ".title-salary",
+        "location": "label.address",
+        "post_date": "label.label-update",
+        "next_page_button": "ul.pagination a[rel='next'][data-href]"
+      },
+      "detail_page": {
+        "wait_for_element": "div.job-detail__information-detail--content",
+        "selectors": {
+          "company_info": {
+            "company_name": "div.company-name-label a.name",
+            "company_scale": "div.company-scale div.company-value",
+            "company_field": "div.company-field div.company-value",
+            "company_address": "div.company-address div.company-value"
+          },
+          "general_info": {
+            "container": "div.job-detail__body-right--box-general"
+          },
+          "job_content": {
+            "container": "div.job-detail__information-detail--content div.job-description"
+          },
+          "skills_categories": {
+            "related_job_categories": ".box-category a.box-category-tag",
+            "required_skills_tags": ".box-category div:has(div.box-title:contains('Kỹ năng cần có')) span.box-category-tag",
+            "preferred_skills_tags": ".box-category div:has(div.box-title:contains('Kỹ năng nên có')) span.box-category-tag"
+          },
+          "application_deadline": "div.job-detail__information-detail--actions-label"
+        }
+      }
+    }
+  }
+}
