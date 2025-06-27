@@ -144,8 +144,8 @@ python3 detailScraper.py
 ---
 
 ## 🗃️ File log
-
-- Log crawl lưu trong **scraper.log** để dễ debug
+- Log crawl nhanh các url lưu trong **list_scraper.log**
+- Log crawl thông tin chi tiết lưu trong **scraper.log** để dễ debug
 - Có log trạng thái, lỗi kết nối, lỗi selector
 
 ---
