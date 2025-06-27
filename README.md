@@ -16,67 +16,118 @@
 /jobs-pipeline-analysis/detailJobsCrawl
 => dùng để tách biệt rõ ràng các luồng xử lý hơn nữa, nhằm khi cần crawl thêm các website khác
 
-
 # 📦 detailJobsCrawl_topcv
 
-## 📌 Mục tiêu
-Xây dựng một pipeline crawler để thu thập tin tuyển dụng từ TopCV.vn (bao gồm danh sách và chi tiết), lưu trữ vào cơ sở dữ liệu PostgreSQL.  
-Mục đích chính: phục vụ phân tích dữ liệu thị trường việc làm tại Việt Nam.
+**Vietnam Job Scraper for TopCV.vn**  
+
+Thu thập dữ liệu tin tuyển dụng (danh sách + chi tiết) từ TopCV.vn và lưu vào PostgreSQL để phục vụ phân tích nhu cầu việc làm tại Việt Nam.
 
 ---
 
-## ⚙️ Yêu cầu cài đặt
-
-**1️⃣ Tạo file `.env` trong thư mục dự án**
-
-Ví dụ:
-DB_NAME=your_database_name
-DB_USER=your_database_user
-DB_PASSWORD=your_database_password
-DB_HOST=localhost
-DB_PORT=5432
-USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36
+## 🎯 Mục tiêu
+- Crawl danh sách tin tuyển dụng từ TopCV (list page)
+- Crawl chi tiết tin tuyển dụng (detail page)
+- Lưu dữ liệu vào PostgreSQL
+- Tích hợp .env để quản lý cấu hình dễ dàng
 
 ---
 
-**2️⃣ Cài đặt Python packages**
-pip install -r requirements.txt
+## 📌 Cấu trúc thư mục
+detailJobsCrawl_topcv/
+│
+├── detailScraper.py # Crawl chi tiết job
+├── listPageScraper.py # Crawl danh sách job
+├── jobs_detailed.sql # SQL tạo bảng trong PostgreSQL
+├── sites_config.json # Selectors & cấu hình crawl
+├── scraper.log # File log
+├── requirements.txt # Danh sách Python package
+├── .env # Biến môi trường
+└── README.md # Hướng dẫn sử dụng
+---
+
+## ⚙️ Yêu cầu
+
+- Python 3.8+
+- PostgreSQL (cài sẵn và đang chạy)
+- Tài khoản PostgreSQL có quyền kết nối và insert
 
 ---
 
 ## 💾 Database
 
-- Sử dụng PostgreSQL
-- Tên bảng: `topcv_jobs_detailed`
-- Schema có sẵn trong file **jobs_detailed.sql**
+**Tên bảng mặc định:** `topcv_jobs_detailed`
 
-Để tạo bảng trong DB, có thể chạy:
+✅ Tạo bảng bằng script SQL có sẵn trong file jobs_detailed.sql
 
-```sql
-\i jobs_detailed.sql
-trong psql hoặc tool như pgAdmin.
 
-🚀 Cách chạy
-🔹 Bước 1. Crawl danh sách job
+---
 
+## 🗂️ Cài đặt môi trường
+
+### 1️⃣ Clone repo
+git clone <repo_link>
+cd detailJobsCrawl_topcv
+
+---
+
+### 2️⃣ Tạo file `.env`
+Với nội dung mẫu:
+---
+DB_NAME=your_database_name
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+
+USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36
+---
+📌 Thay thế giá trị theo cấu hình của bạn.
+---
+
+### 3️⃣ Cài Python packages
+pip install -r requirements.txt
+
+---
+
+## 🚀 Cách sử dụng
+
+### ✅ Crawl danh sách tin tuyển dụng
 python3 listPageScraper.py
 
-Thu thập URL và thông tin sơ bộ của job
-Lưu vào bảng với status pending_details
+- Thu thập danh sách job URL
+- Lưu vào PostgreSQL với status = 'pending_details'
 
-Bước 2. Crawl chi tiết job
+---
 
+### ✅ Crawl chi tiết tin tuyển dụng
 python3 detailScraper.py
 
-Lấy chi tiết thông tin từng job (mô tả, yêu cầu, kỹ năng)
-Cập nhật vào bảng
+- Đọc job_url từ DB với status='pending_details'
+- Trích xuất chi tiết tin tuyển dụng
+- Cập nhật DB với thông tin chi tiết và đổi status='completed'
 
-🗂️ File cấu hình
-✅ sites_config.json
-Chứa các selector CSS cho trang list và trang detail.
+---
 
-📝 Log
-Các hoạt động và lỗi được ghi vào: scraper.log
+## 📈 Workflow gợi ý
+1️⃣ Chạy `listPageScraper.py` để crawl danh sách nhiều page.  
+2️⃣ Chạy `detailScraper.py` để thu chi tiết.  
+3️⃣ Kiểm tra dữ liệu trong PostgreSQL.  
+4️⃣ Xuất CSV cho phân tích / dashboard.  
+
+---
+
+## 🗃️ File log
+
+- Log crawl lưu trong **scraper.log** để dễ debug.
+- Có log trạng thái, lỗi kết nối, lỗi selector.
+
+---
+
+## ✨ Author
+- Trần Gia Kiệt (gkinhere)
+- Liên hệ: giakiettran14102005@gmail.com
+
+
 
 
 
