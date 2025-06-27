@@ -30,7 +30,7 @@ logging.basicConfig(
 load_dotenv()
 DB_TABLE_NAME = 'topcv_jobs_detailed'
 MAX_PAGES_TO_SCRAPE = 2 # Tăng lên để test phân trang
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+USER_AGENT = os.getenv('USER_AGENT')
 SITE_NAME = "topcv" # ADDED: Moved from main for consistency
 
 def get_db_connection():

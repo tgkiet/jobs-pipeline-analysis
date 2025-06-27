@@ -29,7 +29,7 @@ logging.basicConfig(
 # --- 1. Load config + .env ---
 load_dotenv()
 DB_TABLE_NAME = 'topcv_jobs_detailed'
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+USER_AGENT = os.getenv('USER_AGENT')
 
 # --- 2. Helpers ---
 def get_db_connection():
