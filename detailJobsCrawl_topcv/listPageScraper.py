@@ -4,8 +4,6 @@ import random
 import json
 import logging
 from datetime import datetime
-from urllib.parse import urljoin
-
 import psycopg2
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -15,6 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 import undetected_chromedriver as uc
+from urllib.parse import urljoin, urlsplit, urlunsplit
 
 # --- ADDED: Basic Logging Configuration ---
 logging.basicConfig(
@@ -60,6 +59,31 @@ def safe_get_text(element, selector):
     tag = element.select_one(selector)
     return tag.get_text(strip=True) if tag else None
 
+# --- ADDED: Function to normalize job URLs ---
+# Chuẩn hóa URL để loại bỏ query và fragment, ép scheme về https, netloc và path thành lowercase, và bỏ / dư ở cuối path
+def normalize_job_url(raw_url):
+    """
+    Chuẩn hóa URL một cách toàn diện:
+    1. Ép scheme về 'https' để thống nhất.
+    2. Chuyển domain (netloc) về chữ thường.
+    3. Chuyển đường dẫn (path) về chữ thường.
+    4. Xóa dấu gạch chéo (/) dư thừa ở cuối đường dẫn.
+    5. Loại bỏ hoàn toàn các tham số truy vấn (query) và fragment.
+    """
+    parts = urlsplit(raw_url)
+    
+    # Ép scheme về https, chuyển netloc và path về chữ thường
+    scheme = 'https'
+    netloc = parts.netloc.lower()
+    path = parts.path.lower()
+    
+    # Bỏ dấu / dư ở cuối path
+    if path.endswith('/'):
+        path = path[:-1]
+        
+    # Tạo lại URL đã được chuẩn hóa, bỏ qua query và fragment
+    return urlunsplit((scheme, netloc, path, '', ''))
+
 def main():
     logging.info(f"[START] Quét danh sách jobs từ site: {SITE_NAME}") # CHANGED
     config = load_config(SITE_NAME)
@@ -104,8 +128,13 @@ def main():
                     url_tag = job.select_one(list_selectors['job_url'])
                     if not url_tag or not url_tag.get("href"): continue
 
-                    job_url = urljoin(base_url, url_tag["href"])
+                    raw_full_url = urljoin(base_url, url_tag["href"])
+
+                    # --- SỬ DỤNG HÀM CHUẨN HÓA URL ---
+                    job_url = normalize_job_url(raw_full_url)
+
                     job_title = safe_get_text(job, list_selectors['job_title'])
+                    
                     company = safe_get_text(job, list_selectors['company_name'])
                     salary = safe_get_text(job, list_selectors['salary'])
                     location = safe_get_text(job, list_selectors['location'])
