@@ -7,18 +7,18 @@
 ## 📁 Cấu trúc các thư mục chính
 
 ```
-phase1/crawlBasic_firstpage
+/phase1/crawlBasic_firstpage
     → Crawl thông tin cơ bản của một job ở trang đầu tiên của TopCV
 
-phase1/crawlBasic_Multipage
+/phase1/crawlBasic_Multipage
     → Crawl thông tin cơ bản của nhiều job, nhiều trang TopCV
 
-phase2/topcv_details_Multipage_crawl
+/phase2/topcv_details_Multipage_crawl
     → Crawl chi tiết các job ở nhiều trang TopCV
         ver1: Gộp tất cả logic vào 1 ipynb (khó quản lý)
         ver2: Tách từng phần, dễ hiểu hơn
 
-/detailJobsCrawl
+/detailJobsCrawl_topcv
     → Tách biệt rõ các luồng xử lý, dễ mở rộng cho nhiều website khác
 ```
 
