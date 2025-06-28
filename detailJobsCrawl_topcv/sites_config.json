@@ -11,7 +11,7 @@
         "salary": ".title-salary",
         "location": "label.address",
         "post_date": "label.label-update",
-        "next_page_button": "ul.pagination a[rel='next'][data-href]"
+        "next_page_button": "ul.pagination a[rel='next']"
       },
       "detail_page": {
         "wait_for_element": "div.job-detail__information-detail--content",

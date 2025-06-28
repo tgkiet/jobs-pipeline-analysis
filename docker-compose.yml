@@ -1,0 +1,33 @@
+# Cú pháp Docker Compose V2, không cần khai báo 'version'
+services:
+  postgres-tgk:
+    image: postgres:16-alpine
+    container_name: topcv_postgres_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: topcvdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+
+  list-scraper:
+    build:
+      context: ./detailJobsCrawl_topcv
+    container_name: topcv_list_scraper
+    environment:
+      DOCKER_ENV: "true"
+      DB_HOST: postgres-tgk
+      DB_PORT: "5432"
+      DB_NAME: topcvdb
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+      CHROME_BIN: "/usr/bin/google-chrome-stable"
+    depends_on:
+      - postgres-tgk
+
+volumes:
+  postgres_data:

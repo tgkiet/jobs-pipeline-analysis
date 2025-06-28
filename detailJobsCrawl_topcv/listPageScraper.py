@@ -28,7 +28,7 @@ logging.basicConfig(
 # --- Configuration ---
 load_dotenv()
 DB_TABLE_NAME = 'topcv_jobs_detailed'
-MAX_PAGES_TO_SCRAPE = 2 # Tăng lên để test phân trang
+MAX_PAGES_TO_SCRAPE = 50 # Tăng lên để test phân trang
 USER_AGENT = os.getenv('USER_AGENT')
 SITE_NAME = "topcv" # ADDED: Moved from main for consistency
 
@@ -93,10 +93,82 @@ def main():
     current_list_page_url = config['list_page_url']
     list_selectors = config['selectors']['list_page']
 
+# --- OPTIONS CHROME / SELENIUM ---
     options = uc.ChromeOptions()
     options.add_argument(f'--user-agent={USER_AGENT}')
     options.add_argument('--window-size=1920,1080')
-    driver = uc.Chrome(options=options)
+    options.add_argument('--disable-blink-features=AutomationControlled')
+
+    # FIXED: Docker-specific Chrome configuration
+    if os.environ.get("DOCKER_ENV"):
+        logging.info("Detected DOCKER_ENV → force headless, no-sandbox, disable-gpu")
+        options.add_argument('--headless=new')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--disable-web-security')
+        options.add_argument('--allow-running-insecure-content')
+        options.add_argument('--disable-features=VizDisplayCompositor')
+    else:
+        # LOCAL DEVELOPMENT MODE
+        local_headless = os.environ.get("LOCAL_HEADLESS", "false").lower() == "true"
+        if local_headless:
+            logging.info("Local run with headless mode enabled via LOCAL_HEADLESS=true")
+            options.add_argument('--headless=new')
+        else:
+            logging.info("Local run without headless (for debugging in real browser window)")
+
+    # Always disable extensions and automation flags
+    options.add_argument('--disable-extensions')
+    options.add_argument('--disable-infobars')
+
+    # FIXED: Chrome binary detection and driver initialization
+    chrome_executable_path = os.environ.get("CHROME_BIN")
+    if chrome_executable_path and os.path.exists(chrome_executable_path):
+        logging.info(f"Chrome binary found at: {chrome_executable_path}")
+        options.binary_location = chrome_executable_path
+
+    logging.info("🚀 Chuẩn bị khởi tạo Chrome driver...")
+    
+    # FIXED: Explicit browser_executable_path for Docker
+    try:
+        if os.environ.get("DOCKER_ENV") and chrome_executable_path:
+            # In Docker, explicitly specify the browser executable path
+            driver = uc.Chrome(
+                options=options,
+                browser_executable_path=chrome_executable_path
+            )
+        else:
+            # Local development - let undetected-chromedriver auto-detect
+            driver = uc.Chrome(options=options)
+        
+        logging.info("✅ Chrome driver đã khởi tạo thành công.")
+    except Exception as e:
+        logging.error(f"❌ Lỗi khởi tạo Chrome driver: {e}")
+        # ADDED: Fallback mechanism
+        if os.environ.get("DOCKER_ENV"):
+            logging.info("🔄 Thử fallback với standard ChromeDriver...")
+            from selenium import webdriver
+            from selenium.webdriver.chrome.service import Service
+            from selenium.webdriver.chrome.options import Options
+            
+            # Convert uc.ChromeOptions to standard Options
+            chrome_options = Options()
+            for arg in options.arguments:
+                chrome_options.add_argument(arg)
+            if hasattr(options, 'binary_location'):
+                chrome_options.binary_location = options.binary_location
+            
+            try:
+                service = Service()
+                driver = webdriver.Chrome(service=service, options=chrome_options)
+                logging.info("✅ Fallback ChromeDriver đã khởi tạo thành công.")
+            except Exception as fallback_error:
+                logging.error(f"❌ Fallback cũng thất bại: {fallback_error}")
+                return
+        else:
+            return
+    
     conn = get_db_connection()
 
     # --- ADDED: try...finally to ensure resources are always cleaned up ---
