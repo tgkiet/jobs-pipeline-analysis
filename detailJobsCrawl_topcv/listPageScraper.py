@@ -28,9 +28,9 @@ logging.basicConfig(
 # --- Configuration ---
 load_dotenv()
 DB_TABLE_NAME = 'topcv_jobs_detailed'
-MAX_PAGES_TO_SCRAPE = 50 # Tăng lên để test phân trang
+MAX_PAGES_TO_SCRAPE = 50 
 USER_AGENT = os.getenv('USER_AGENT')
-SITE_NAME = "topcv" # ADDED: Moved from main for consistency
+SITE_NAME = "topcv"
 
 def get_db_connection():
     try:
@@ -39,17 +39,17 @@ def get_db_connection():
             password=os.getenv('DB_PASSWORD'), host=os.getenv('DB_HOST', 'localhost'),
             port=os.getenv('DB_PORT', '5432')
         )
-        logging.info("=> Kết nối Database thành công!") # CHANGED
+        logging.info("=> Kết nối Database thành công!")
         return conn
     except psycopg2.Error as e:
-        logging.error(f"Lỗi kết nối Database: {e}") # CHANGED
+        logging.error(f"Lỗi kết nối Database: {e}")
         return None
 
 def load_config(site_name="topcv"):
     try:
         with open('sites_config.json', 'r', encoding='utf-8') as f:
             config = json.load(f)
-        logging.info(f"Tải config cho '{site_name}' thành công.") # ADDED
+        logging.info(f"Tải config cho '{site_name}' thành công.")
         return config[site_name]
     except (FileNotFoundError, KeyError) as e:
         logging.error(f"Lỗi: Không tìm thấy file config hoặc không có config cho '{site_name}'. Lỗi: {e}") # CHANGED
@@ -85,7 +85,7 @@ def normalize_job_url(raw_url):
     return urlunsplit((scheme, netloc, path, '', ''))
 
 def main():
-    logging.info(f"[START] Quét danh sách jobs từ site: {SITE_NAME}") # CHANGED
+    logging.info(f"[START] Quét danh sách jobs từ site: {SITE_NAME}")
     config = load_config(SITE_NAME)
     if not config: return
 
