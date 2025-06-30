@@ -1,4 +1,22 @@
-# Cú pháp Docker Compose V2, không cần khai báo 'version'
+# Định nghĩa các khối tái sử dụng ở cấp cao nhất
+# Bất cứ thứ gì bắt đầu bằng 'x-' sẽ được YAML bỏ qua, không coi là service
+x-scraper-base: &scraper-base
+  build:
+    context: ./detailJobsCrawl_topcv
+  restart: on-failure
+  environment:
+    DOCKER_ENV: "true"
+    CHROME_BIN: "/usr/bin/google-chrome-stable"
+    # Truyền trực tiếp các biến từ file .env
+    DB_USER: ${DB_USER}
+    DB_PASSWORD: ${DB_PASSWORD}
+    DB_NAME: ${DB_NAME}
+    DB_HOST_DOCKER: ${DB_HOST_DOCKER}
+    DB_PORT_DOCKER: ${DB_PORT_DOCKER}
+    USER_AGENT: ${USER_AGENT}
+  depends_on:
+    postgres-tgk:
+      condition: service_healthy
 services:
   postgres-tgk:
     image: postgres:16-alpine
@@ -6,28 +24,57 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: topcvdb
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
+      # Map cổng 5432 của container ra cổng 5433 của máy thật
+      # ĐỂ TRÁNH XUNG ĐỘT với Postgres local đang chạy ở 5432!
       - "5433:5432"
     restart: unless-stopped
+    # Healthcheck để đảm bảo DB sẵn sàng trước khi scraper kết nối
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  list-scraper:
-    build:
-      context: ./detailJobsCrawl_topcv
-    container_name: topcv_list_scraper
-    environment:
-      DOCKER_ENV: "true"
-      DB_HOST: postgres-tgk
-      DB_PORT: "5432"
-      DB_NAME: topcvdb
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      USER_AGENT: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-      CHROME_BIN: "/usr/bin/google-chrome-stable"
-    depends_on:
-      - postgres-tgk
-
+  # Gộp thành MỘT service duy nhất
+  scraper-pipeline:
+    <<: *scraper-base # Vẫn kế thừa từ khuôn mẫu
+    container_name: topcv_scraper_pipeline
+    # Ghi đè command để chạy một shell script
+    command: >
+      sh -c "
+        echo '--- STEP 1: Starting list page scraper ---' &&
+        python listPageScraper.py &&
+        echo '--- STEP 2: Starting detail page scraper ---' &&
+        python detailScraper.py &&
+        echo '--- PIPELINE COMPLETED SUCCESSFULLY ---'
+      "
 volumes:
   postgres_data:
+
+  # này là chia 2 container thành 2 service khác nhau, nhưng 
+  # (đang lỗi là xong list-scraper nhưng detail ko tự chạy)
+  
+  # # Service để chạy cào list jobs
+  # list-scraper:
+  #   # Kế thừa toàn bộ cấu hình từ scraper-base
+  #   <<: *scraper-base 
+  #   container_name: topcv_list_scraper
+  #   # Ghi đè CMD của Dockerfile để chạy script cào list
+  #   command: python listPageScraper.py
+
+  # # Service để chạy cào detail jobs
+  # detail-scraper:
+  #   <<: *scraper-base
+  #   container_name: topcv_detail_scraper
+  #   # Ghi đè CMD của Dockerfile để chạy script cào detail
+  #   command: python detailScraper.py
+  #   # cho detail-scraper khởi động sau list-scraper một chút
+  #   
+  #   depends_on:
+  #     list-scraper:
+  #       condition: service_completed_successfully
+

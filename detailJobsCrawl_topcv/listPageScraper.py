@@ -15,12 +15,13 @@ from selenium.common.exceptions import TimeoutException
 import undetected_chromedriver as uc
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-# --- ADDED: Basic Logging Configuration ---
+# --- Logging ---
+# NOTE: Cải tiến logging để in ra cả console và file
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("list_scraper.log", mode='a'),
+        logging.FileHandler("detail_scraper.log", mode='a'),
         logging.StreamHandler()
     ]
 )
@@ -28,18 +29,36 @@ logging.basicConfig(
 # --- Configuration ---
 load_dotenv()
 DB_TABLE_NAME = 'topcv_jobs_detailed'
-MAX_PAGES_TO_SCRAPE = 50 
+MAX_PAGES_TO_SCRAPE = 36 
 USER_AGENT = os.getenv('USER_AGENT')
 SITE_NAME = "topcv"
 
+# get_db_connection() phiên bản "thông minh"
 def get_db_connection():
     try:
+        # Kiểm tra xem có biến cờ hiệu DOCKER_ENV không
+        is_in_docker = os.getenv('DOCKER_ENV', 'false').lower() == 'true'
+
+        if is_in_docker:
+            # Chạy trong Docker -> Dùng cấu hình _DOCKER
+            db_host = os.getenv('DB_HOST_DOCKER')
+            db_port = os.getenv('DB_PORT_DOCKER')
+            logging.info("Running in Docker, using DOCKER DB config.")
+        else:
+            # Chạy Local -> Dùng cấu hình _LOCAL
+            db_host = os.getenv('DB_HOST_LOCAL')
+            db_port = os.getenv('DB_PORT_LOCAL')
+            logging.info("Running locally, using LOCAL DB config.")
+
         conn = psycopg2.connect(
-            dbname=os.getenv('DB_NAME'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'), host=os.getenv('DB_HOST', 'localhost'),
-            port=os.getenv('DB_PORT', '5432')
+            dbname=os.getenv('DB_NAME'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            host=db_host,
+            port=db_port
         )
-        logging.info("=> Kết nối Database thành công!")
+        conn.autocommit = False
+        logging.info(f"=> Kết nối Database thành công tới {db_host}:{db_port}!")
         return conn
     except psycopg2.Error as e:
         logging.error(f"Lỗi kết nối Database: {e}")
@@ -93,7 +112,7 @@ def main():
     current_list_page_url = config['list_page_url']
     list_selectors = config['selectors']['list_page']
 
-# --- OPTIONS CHROME / SELENIUM ---
+    # --- OPTIONS CHROME / SELENIUM ---
     options = uc.ChromeOptions()
     options.add_argument(f'--user-agent={USER_AGENT}')
     options.add_argument('--window-size=1920,1080')
@@ -183,7 +202,7 @@ def main():
             logging.info(f"\n[PAGE {current_page}] Đang xử lý: {current_list_page_url}") # CHANGED
             try:
                 driver.get(current_list_page_url)
-                WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.CSS_SELECTOR, list_selectors['job_item'])))
+                WebDriverWait(driver, 36).until(EC.presence_of_element_located((By.CSS_SELECTOR, list_selectors['job_item'])))
                 time.sleep(random.uniform(2, 4))
                 soup = BeautifulSoup(driver.page_source, 'html.parser')
                 jobs = soup.select(list_selectors['job_item'])
