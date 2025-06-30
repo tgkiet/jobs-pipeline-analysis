@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Môi trường ảo
+venv/
+.venv/
+
+# Log files
+*.log
+*.log.*
+
+# IDE/Editor files
+.vscode/
+.idea/
+
+# Dotenv file (không nên đưa vào image)
+.env
+.env.*
+
+# Các file khác
+*.swp

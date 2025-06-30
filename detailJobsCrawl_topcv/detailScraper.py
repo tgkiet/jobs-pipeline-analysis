@@ -19,28 +19,49 @@ from selenium.webdriver.support.ui import WebDriverWait
 import undetected_chromedriver as uc
 
 # --- Logging ---
+# NOTE: Cải tiến logging để in ra cả console và file
 logging.basicConfig(
-    filename="scraper.log",
-    filemode='a',
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.INFO
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("detail_scraper.log", mode='a'),
+        logging.StreamHandler()
+    ]
 )
 
 # --- 1. Load config + .env ---
 load_dotenv()
 DB_TABLE_NAME = 'topcv_jobs_detailed'
 USER_AGENT = os.getenv('USER_AGENT')
+SITE_NAME = "topcv"
 
 # --- 2. Helpers ---
+# get_db_connection() phiên bản "thông minh"
 def get_db_connection():
     try:
+        # Kiểm tra xem có biến cờ hiệu DOCKER_ENV không
+        is_in_docker = os.getenv('DOCKER_ENV', 'false').lower() == 'true'
+
+        if is_in_docker:
+            # Chạy trong Docker -> Dùng cấu hình _DOCKER
+            db_host = os.getenv('DB_HOST_DOCKER')
+            db_port = os.getenv('DB_PORT_DOCKER')
+            logging.info("Running in Docker, using DOCKER DB config.")
+        else:
+            # Chạy Local -> Dùng cấu hình _LOCAL
+            db_host = os.getenv('DB_HOST_LOCAL')
+            db_port = os.getenv('DB_PORT_LOCAL')
+            logging.info("Running locally, using LOCAL DB config.")
+
         conn = psycopg2.connect(
-            dbname=os.getenv('DB_NAME'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'), host=os.getenv('DB_HOST', 'localhost'),
-            port=os.getenv('DB_PORT', '5432')
+            dbname=os.getenv('DB_NAME'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            host=db_host,
+            port=db_port
         )
         conn.autocommit = False
-        logging.info("=> Kết nối Database thành công!")
+        logging.info(f"=> Kết nối Database thành công tới {db_host}:{db_port}!")
         return conn
     except psycopg2.Error as e:
         logging.error(f"Lỗi kết nối Database: {e}")
@@ -126,8 +147,9 @@ def parse_skills_tags(soup, config):
 def parse_application_deadline(soup, selector):
     tag = soup.select_one(selector)
     if tag:
-        if match := re.search(r'(\d{2}/\d{2}/\d{4})', tag.get_text(strip=True)):
-            return match.group(1)
+        # Chuyển đổi sang định dạng YYYY-MM-DD để tương thích với kiểu DATE trong SQL
+        if match := re.search(r'(\d{2})/(\d{2})/(\d{4})', tag.get_text(strip=True)):
+            return f"{match.group(3)}-{match.group(2)}-{match.group(1)}"
     return None
 
 def get_text(soup, selector):
@@ -138,21 +160,81 @@ def get_text(soup, selector):
 def main_worker():
     logging.info("[Start] Worker xử lý chi tiết job theo config...")
     driver, conn = None, None
+    total_processed = 0 # Thêm biến đếm job đã xử lý
+    total_errors = 0 # Biến đếm lỗi
     try:
         options = uc.ChromeOptions()
         options.add_argument(f'--user-agent={USER_AGENT}')
         options.add_argument('--window-size=1920,1080')
-        driver = uc.Chrome(options=options)
+        options.add_argument('--disable-blink-features=AutomationControlled')
+
+        if os.environ.get("DOCKER_ENV"):
+            logging.info("Detected DOCKER_ENV → force headless, no-sandbox, disable-gpu")
+            options.add_argument('--headless=new')
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
+            options.add_argument('--disable-gpu')
+            options.add_argument('--disable-web-security')
+            options.add_argument('--allow-running-insecure-content')
+            options.add_argument('--disable-features=VizDisplayCompositor')
+        else:
+            local_headless = os.environ.get("LOCAL_HEADLESS", "false").lower() == "true"
+            if local_headless:
+                logging.info("Local run with headless mode enabled via LOCAL_HEADLESS=true")
+                options.add_argument('--headless=new')
+            else:
+                logging.info("Local run without headless (for debugging in real browser window)")
+
+        options.add_argument('--disable-extensions')
+        options.add_argument('--disable-infobars')
+
+        chrome_executable_path = os.environ.get("CHROME_BIN")
+        if chrome_executable_path and os.path.exists(chrome_executable_path):
+            logging.info(f"Chrome binary found at: {chrome_executable_path}")
+            options.binary_location = chrome_executable_path
+
+        logging.info("🚀 Chuẩn bị khởi tạo Chrome driver...")
+        try:
+            if os.environ.get("DOCKER_ENV") and chrome_executable_path:
+                driver = uc.Chrome(options=options, browser_executable_path=chrome_executable_path)
+            else:
+                driver = uc.Chrome(options=options)
+            logging.info("✅ Chrome driver đã khởi tạo thành công.")
+        except Exception as e:
+            logging.error(f"❌ Lỗi khởi tạo Chrome driver: {e}")
+            if os.environ.get("DOCKER_ENV"):
+                logging.info("🔄 Thử fallback với standard ChromeDriver...")
+                from selenium import webdriver
+                from selenium.webdriver.chrome.service import Service
+                from selenium.webdriver.chrome.options import Options
+                
+                chrome_options = Options()
+                for arg in options.arguments: chrome_options.add_argument(arg)
+                if hasattr(options, 'binary_location'): chrome_options.binary_location = options.binary_location
+                
+                try:
+                    service = Service()
+                    driver = webdriver.Chrome(service=service, options=chrome_options)
+                    logging.info("✅ Fallback ChromeDriver đã khởi tạo thành công.")
+                except Exception as fallback_error:
+                    logging.error(f"❌ Fallback cũng thất bại: {fallback_error}")
+                    return
+            else:
+                return
+        
         conn = get_db_connection()
         if not conn: return
 
         while True:
             cur = conn.cursor()
             cur.execute(sql.SQL("SELECT job_id, job_url, source_site FROM {} WHERE status = 'pending_details' ORDER BY job_id LIMIT 1;").format(sql.Identifier(DB_TABLE_NAME)))
-            job_to_process = cur.fetchone(); cur.close()
+            job_to_process = cur.fetchone()
+            cur.close()
 
+            # SỬA ĐỔI QUAN TRỌNG NHẤT ĐỂ DOCKERIZE: THÊM ĐIỂM DỪNG
             if not job_to_process:
-                logging.info("[WAIT] Không còn job nào. Nghỉ 10 phút..."); time.sleep(600); continue
+                logging.info("[DONE] Không còn job nào ở trạng thái 'pending_details' để xử lý. Hoàn thành.")
+                break # Thoát khỏi vòng lặp while True
 
             job_id, detail_url, source_site = job_to_process
             logging.info(f"[PROCESS] Job ID: {job_id} | URL: {detail_url[:70]}...")
@@ -205,13 +287,18 @@ def main_worker():
             logging.info(f"[SLEEP] Nghỉ {sleep_time}s trước khi xử lý job kế tiếp...")
             time.sleep(sleep_time)
 
-    except KeyboardInterrupt:
-        logging.info("\n[STOP] Đã dừng bằng tay (Ctrl+C)")
     except Exception as e:
-        logging.critical(f"[FATAL] Lỗi tổng thể: {e}")
+        logging.critical(f"[FATAL] Lỗi tổng thể không thể phục hồi: {e}", exc_info=True)
     finally:
-        if conn: conn.close()
-        if driver: driver.quit()
+        logging.info("---")
+        logging.info(f"[SUMMARY] Đã xử lý xong: {total_processed} jobs.")
+        logging.info(f"Số lỗi gặp phải: {total_errors}")
+        if driver:
+            driver.quit()
+            logging.info("Đã đóng trình duyệt Selenium.")
+        if conn:
+            conn.close()
+            logging.info("Đã đóng kết nối Database.")
 
 if __name__ == "__main__":
     main_worker()

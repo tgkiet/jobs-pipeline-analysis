@@ -1,68 +1,80 @@
-2025-06-27 20:37:56,195 - INFO - [START] Quét danh sách jobs từ site: topcv
-2025-06-27 20:37:56,195 - INFO - Tải config cho 'topcv' thành công.
-2025-06-27 20:37:58,547 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
-2025-06-27 20:37:59,121 - ERROR - Lỗi kết nối Database: could not translate host name "postgres_db" to address: Temporary failure in name resolution
+2025-06-29 19:20:48,754 - INFO - [START] Quét danh sách jobs từ site: topcv
+2025-06-29 19:20:48,755 - INFO - Tải config cho 'topcv' thành công.
+2025-06-29 19:20:48,755 - INFO - Local run without headless (for debugging in real browser window)
+2025-06-29 19:20:48,755 - INFO - 🚀 Chuẩn bị khởi tạo Chrome driver...
+2025-06-29 19:20:50,368 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
+2025-06-29 19:20:50,842 - INFO - ✅ Chrome driver đã khởi tạo thành công.
+2025-06-29 19:20:50,842 - INFO - Running locally, using Local DB config.
+2025-06-29 19:20:50,843 - ERROR - Lỗi kết nối Database: connection to server at "localhost" (127.0.0.1), port 5433 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
 
-2025-06-27 20:37:59,224 - INFO - Đã đóng trình duyệt Selenium.
-2025-06-27 20:40:09,424 - INFO - [START] Quét danh sách jobs từ site: topcv
-2025-06-27 20:40:09,424 - INFO - Tải config cho 'topcv' thành công.
-2025-06-27 20:40:11,758 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
-2025-06-27 20:40:12,255 - ERROR - Lỗi kết nối Database: could not translate host name "postgres_db" to address: Temporary failure in name resolution
+2025-06-29 19:20:50,947 - INFO - Đã đóng trình duyệt Selenium.
+2025-06-29 19:31:46,042 - INFO - [START] Quét danh sách jobs từ site: topcv
+2025-06-29 19:31:46,042 - INFO - Tải config cho 'topcv' thành công.
+2025-06-29 19:31:46,042 - INFO - Local run without headless (for debugging in real browser window)
+2025-06-29 19:31:46,042 - INFO - 🚀 Chuẩn bị khởi tạo Chrome driver...
+2025-06-29 19:31:48,186 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
+2025-06-29 19:31:48,768 - INFO - ✅ Chrome driver đã khởi tạo thành công.
+2025-06-29 19:31:48,769 - INFO - Running locally, using LOCAL DB config.
+2025-06-29 19:31:48,769 - ERROR - Lỗi kết nối Database: connection to server at "localhost" (127.0.0.1), port 5433 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
 
-2025-06-27 20:40:12,358 - INFO - Đã đóng trình duyệt Selenium.
-2025-06-27 20:42:28,594 - INFO - [START] Quét danh sách jobs từ site: topcv
-2025-06-27 20:42:28,594 - INFO - Tải config cho 'topcv' thành công.
-2025-06-27 20:42:30,862 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
-2025-06-27 20:42:31,345 - INFO - => Kết nối Database thành công!
-2025-06-27 20:42:31,345 - INFO - 
+2025-06-29 19:31:48,874 - INFO - Đã đóng trình duyệt Selenium.
+2025-06-29 19:32:02,200 - INFO - [START] Quét danh sách jobs từ site: topcv
+2025-06-29 19:32:02,200 - INFO - Tải config cho 'topcv' thành công.
+2025-06-29 19:32:02,201 - INFO - Local run without headless (for debugging in real browser window)
+2025-06-29 19:32:02,201 - INFO - 🚀 Chuẩn bị khởi tạo Chrome driver...
+2025-06-29 19:32:04,673 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
+2025-06-29 19:32:05,168 - INFO - ✅ Chrome driver đã khởi tạo thành công.
+2025-06-29 19:32:05,168 - INFO - Running locally, using LOCAL DB config.
+2025-06-29 19:32:05,168 - ERROR - Lỗi kết nối Database: invalid integer value "5432           # Port của Postgres cài trên máy thật" for connection option "port"
+
+2025-06-29 19:32:05,271 - INFO - Đã đóng trình duyệt Selenium.
+2025-06-29 19:33:25,655 - INFO - [START] Quét danh sách jobs từ site: topcv
+2025-06-29 19:33:25,655 - INFO - Tải config cho 'topcv' thành công.
+2025-06-29 19:33:25,655 - INFO - Local run without headless (for debugging in real browser window)
+2025-06-29 19:33:25,655 - INFO - 🚀 Chuẩn bị khởi tạo Chrome driver...
+2025-06-29 19:33:27,763 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
+2025-06-29 19:33:28,242 - INFO - ✅ Chrome driver đã khởi tạo thành công.
+2025-06-29 19:33:28,242 - INFO - Running locally, using LOCAL DB config.
+2025-06-29 19:33:28,243 - ERROR - Lỗi kết nối Database: invalid integer value "5432           # Port của Postgres cài trên máy thật" for connection option "port"
+
+2025-06-29 19:33:28,345 - INFO - Đã đóng trình duyệt Selenium.
+2025-06-29 19:33:36,659 - INFO - [START] Quét danh sách jobs từ site: topcv
+2025-06-29 19:33:36,659 - INFO - Tải config cho 'topcv' thành công.
+2025-06-29 19:33:36,659 - INFO - Local run without headless (for debugging in real browser window)
+2025-06-29 19:33:36,659 - INFO - 🚀 Chuẩn bị khởi tạo Chrome driver...
+2025-06-29 19:33:38,832 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
+2025-06-29 19:33:39,294 - INFO - ✅ Chrome driver đã khởi tạo thành công.
+2025-06-29 19:33:39,294 - INFO - Running locally, using LOCAL DB config.
+2025-06-29 19:33:39,306 - ERROR - Lỗi kết nối Database: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  database "topcvdb" does not exist
+
+2025-06-29 19:33:39,309 - INFO - Đã đóng trình duyệt Selenium.
+2025-06-29 19:35:01,945 - INFO - [START] Quét danh sách jobs từ site: topcv
+2025-06-29 19:35:01,945 - INFO - Tải config cho 'topcv' thành công.
+2025-06-29 19:35:01,945 - INFO - Local run without headless (for debugging in real browser window)
+2025-06-29 19:35:01,945 - INFO - 🚀 Chuẩn bị khởi tạo Chrome driver...
+2025-06-29 19:35:04,657 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
+2025-06-29 19:35:05,122 - INFO - ✅ Chrome driver đã khởi tạo thành công.
+2025-06-29 19:35:05,123 - INFO - Running locally, using LOCAL DB config.
+2025-06-29 19:35:05,129 - INFO - => Kết nối Database thành công tới localhost:5432!
+2025-06-29 19:35:05,129 - INFO - 
 [PAGE 1] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2
-2025-06-27 20:42:38,326 - INFO - [OK] Thêm mới 50 job từ trang này.
-2025-06-27 20:42:50,043 - INFO - 
+2025-06-29 19:35:13,642 - INFO - [OK] Thêm mới 34 job từ trang này.
+2025-06-29 19:35:22,967 - INFO - 
 [PAGE 2] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=2
-2025-06-27 20:42:54,894 - INFO - [OK] Thêm mới 50 job từ trang này.
-2025-06-27 20:43:02,611 - INFO - 
-[TOTAL] Tổng số job mới được thêm vào DB: 100
-2025-06-27 20:43:02,721 - INFO - Đã đóng trình duyệt Selenium.
-2025-06-27 20:43:02,721 - INFO - Đã đóng kết nối Database.
-2025-06-27 20:44:20,159 - INFO - [START] Quét danh sách jobs từ site: topcv
-2025-06-27 20:44:20,159 - INFO - Tải config cho 'topcv' thành công.
-2025-06-27 20:44:22,357 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
-2025-06-27 20:44:22,855 - INFO - => Kết nối Database thành công!
-2025-06-27 20:44:22,855 - INFO - 
-[PAGE 1] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2
-2025-06-27 20:44:29,568 - INFO - [OK] Thêm mới 50 job từ trang này.
-2025-06-27 20:44:41,553 - INFO - 
-[PAGE 2] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=2
-2025-06-27 20:44:47,333 - INFO - [OK] Thêm mới 50 job từ trang này.
-2025-06-27 20:44:58,791 - INFO - 
-[TOTAL] Tổng số job mới được thêm vào DB: 100
-2025-06-27 20:44:58,905 - INFO - Đã đóng trình duyệt Selenium.
-2025-06-27 20:44:58,905 - INFO - Đã đóng kết nối Database.
-2025-06-27 21:18:27,182 - INFO - [START] Quét danh sách jobs từ site: topcv
-2025-06-27 21:18:27,183 - INFO - Tải config cho 'topcv' thành công.
-2025-06-27 21:18:29,567 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
-2025-06-27 21:18:30,077 - INFO - => Kết nối Database thành công!
-2025-06-27 21:18:30,078 - INFO - 
-[PAGE 1] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2
-2025-06-27 21:18:42,412 - INFO - [OK] Thêm mới 50 job từ trang này.
-2025-06-27 21:18:52,294 - INFO - 
-[PAGE 2] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=2
-2025-06-27 21:18:59,043 - INFO - [OK] Thêm mới 50 job từ trang này.
-2025-06-27 21:19:05,792 - INFO - 
-[TOTAL] Tổng số job mới được thêm vào DB: 100
-2025-06-27 21:19:05,803 - INFO - Đã đóng trình duyệt Selenium.
-2025-06-27 21:19:05,803 - INFO - Đã đóng kết nối Database.
-2025-06-27 21:19:22,239 - INFO - [START] Quét danh sách jobs từ site: topcv
-2025-06-27 21:19:22,240 - INFO - Tải config cho 'topcv' thành công.
-2025-06-27 21:19:25,673 - INFO - patching driver executable /home/kiet/.local/share/undetected_chromedriver/undetected_chromedriver
-2025-06-27 21:19:26,321 - INFO - => Kết nối Database thành công!
-2025-06-27 21:19:26,321 - INFO - 
-[PAGE 1] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2
-2025-06-27 21:19:35,189 - INFO - [OK] Thêm mới 0 job từ trang này.
-2025-06-27 21:19:41,543 - INFO - 
-[PAGE 2] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=2
-2025-06-27 21:19:46,873 - INFO - [OK] Thêm mới 0 job từ trang này.
-2025-06-27 21:19:56,279 - INFO - 
-[TOTAL] Tổng số job mới được thêm vào DB: 0
-2025-06-27 21:19:56,389 - INFO - Đã đóng trình duyệt Selenium.
-2025-06-27 21:19:56,389 - INFO - Đã đóng kết nối Database.
+2025-06-29 19:35:27,945 - INFO - [OK] Thêm mới 31 job từ trang này.
+2025-06-29 19:35:35,791 - INFO - 
+[PAGE 3] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=3
+2025-06-29 19:35:40,138 - INFO - [OK] Thêm mới 5 job từ trang này.
+2025-06-29 19:35:48,603 - INFO - 
+[PAGE 4] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=4
+2025-06-29 19:35:54,377 - INFO - [OK] Thêm mới 46 job từ trang này.
+2025-06-29 19:36:05,686 - INFO - 
+[PAGE 5] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=5
+2025-06-29 19:36:10,895 - INFO - [OK] Thêm mới 47 job từ trang này.
+2025-06-29 19:36:20,778 - INFO - 
+[PAGE 6] Đang xử lý: https://www.topcv.vn/tim-viec-lam-moi-nhat-tai-ho-chi-minh-l2?page=6
+2025-06-29 19:36:26,602 - INFO - [OK] Thêm mới 47 job từ trang này.
+2025-06-29 19:36:28,930 - INFO - Đã đóng trình duyệt Selenium.
+2025-06-29 19:36:28,930 - INFO - Đã đóng kết nối Database.

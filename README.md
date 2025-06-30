@@ -1,4 +1,5 @@
 # 📊 The First Personal Project: Phân tích Thị trường Việc làm tại TP.HCM
+# 📊 Phân tích Thị trường Việc làm tại TP.HCM là dự án cá nhân giúp sinh viên và nhà tuyển dụng hiểu rõ hơn nhu cầu tuyển dụng tại Việt Nam thông qua dữ liệu thật từ TopCV
 
 **Roles:** Data Engineer, Data Analyst
 
@@ -8,20 +9,27 @@
 
 ```
 /phase1/crawlBasic_firstpage
-    → Crawl thông tin cơ bản của một job ở trang đầu tiên của TopCV
+    → Crawl thông tin cơ bản trên một trang duy nhất (demo, test selector)
 
 /phase1/crawlBasic_Multipage
-    → Crawl thông tin cơ bản của nhiều job, nhiều trang TopCV
+    → Crawl thông tin cơ bản trên nhiều trang (phân trang)
 
 /phase2/topcv_details_Multipage_crawl
-    → Crawl chi tiết các job ở nhiều trang TopCV
-        ver1: Gộp tất cả logic vào 1 ipynb (khó quản lý)
-        ver2: Tách từng phần, dễ hiểu hơn
+    → Crawl chi tiết nhiều job với 2 phiên bản
+        ver1: All-in-one notebook (dễ bắt đầu, khó scale)
+        ver2: Modular scripts (dễ mở rộng, dễ bảo trì)
 
 /detailJobsCrawl_topcv
     → Tách biệt rõ các luồng xử lý, dễ mở rộng cho nhiều website khác
 ```
-
+## 📍 Suggested Roadmap
+```
+✅ B1: Crawl danh sách job (list page)
+✅ B2: Crawl chi tiết job (detail page)
+✅ B3: Clean và chuẩn hóa dữ liệu trong PostgreSQL
+✅ B4: Phân tích dữ liệu (EDA / Notebook)
+✅ B5: Dashboard / Business Insight
+```
 ---
 
 # 📦 detailJobsCrawl_topcv
