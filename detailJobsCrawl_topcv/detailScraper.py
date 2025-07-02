@@ -90,17 +90,37 @@ def parse_general_info(soup, config):
               "employment_type": None, "gender_requirement": None}
     container = soup.select_one(config.get("container", ""))
     if not container: return result
+    
     for group in container.select(".box-general-group"):
         title_el = group.select_one(".box-general-group-info-title")
         value_el = group.select_one(".box-general-group-info-value")
         if not title_el or not value_el: continue
+        
         title = title_el.get_text(strip=True)
         value = value_el.get_text(strip=True)
-        if "Cấp bậc" in title: result["job_level"] = value
-        elif "Học vấn" in title: result["education_level"] = value
-        elif "Số lượng tuyển" in title: result["quantity_needed"] = value
-        elif "Hình thức làm việc" in title: result["employment_type"] = value
-        elif "Giới tính" in title: result["gender_requirement"] = value
+        
+        if "Cấp bậc" in title:
+            result["job_level"] = value
+        elif "Học vấn" in title:
+            result["education_level"] = value
+        elif "Số lượng tuyển" in title:
+            # --- LOGIC LÀM SẠCH DỮ LIỆU NẰM Ở ĐÂY ---
+            # Dùng regex để tìm tất cả các chữ số trong chuỗi
+            # Ví dụ: "5 người" -> tìm được số 5
+            # Ví dụ: "02 người" -> tìm được số 2
+            # Ví dụ: "Không giới hạn" -> không tìm được số, sẽ trả về None
+            match = re.search(r'\d+', value)
+            if match:
+                # Nếu tìm thấy, chuyển nó thành số nguyên
+                result["quantity_needed"] = int(match.group(0))
+            else:
+                # Nếu không tìm thấy số nào, giữ nguyên là None
+                result["quantity_needed"] = None
+        elif "Hình thức làm việc" in title:
+            result["employment_type"] = value
+        elif "Giới tính" in title:
+            result["gender_requirement"] = value
+            
     return result
 
 def parse_job_content(soup, config):
