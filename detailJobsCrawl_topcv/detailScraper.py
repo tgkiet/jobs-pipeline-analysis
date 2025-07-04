@@ -179,86 +179,111 @@ def get_text(soup, selector):
 # --- 4. Main worker ---
 def main_worker():
     logging.info("[Start] Worker xử lý chi tiết job theo config...")
-    driver, conn = None, None
-    total_processed = 0 # Thêm biến đếm job đã xử lý
-    total_errors = 0 # Biến đếm lỗi
+
+    # NOTE 1: Khai báo các biến điều khiển ra ngoài khối try
+    driver = None
+    conn = None
+    
+    # --- CÁC BIẾN CHO CƠ CHẾ TỰ PHỤC HỒI ---
+    jobs_since_restart = 0
+    JOBS_PER_SESSION = 50  # CẤU HÌNH: Số job xử lý trước khi khởi động lại trình duyệt
+
     try:
-        options = uc.ChromeOptions()
-        options.add_argument(f'--user-agent={USER_AGENT}')
-        options.add_argument('--window-size=1920,1080')
-        options.add_argument('--disable-blink-features=AutomationControlled')
-
-        if os.environ.get("DOCKER_ENV"):
-            logging.info("Detected DOCKER_ENV → force headless, no-sandbox, disable-gpu")
-            options.add_argument('--headless=new')
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
-            options.add_argument('--disable-gpu')
-            options.add_argument('--disable-web-security')
-            options.add_argument('--allow-running-insecure-content')
-            options.add_argument('--disable-features=VizDisplayCompositor')
-        else:
-            local_headless = os.environ.get("LOCAL_HEADLESS", "false").lower() == "true"
-            if local_headless:
-                logging.info("Local run with headless mode enabled via LOCAL_HEADLESS=true")
-                options.add_argument('--headless=new')
-            else:
-                logging.info("Local run without headless (for debugging in real browser window)")
-
-        options.add_argument('--disable-extensions')
-        options.add_argument('--disable-infobars')
-
-        chrome_executable_path = os.environ.get("CHROME_BIN")
-        if chrome_executable_path and os.path.exists(chrome_executable_path):
-            logging.info(f"Chrome binary found at: {chrome_executable_path}")
-            options.binary_location = chrome_executable_path
-
-        logging.info("🚀 Chuẩn bị khởi tạo Chrome driver...")
-        try:
-            if os.environ.get("DOCKER_ENV") and chrome_executable_path:
-                driver = uc.Chrome(options=options, browser_executable_path=chrome_executable_path)
-            else:
-                driver = uc.Chrome(options=options)
-            logging.info("✅ Chrome driver đã khởi tạo thành công.")
-        except Exception as e:
-            logging.error(f"❌ Lỗi khởi tạo Chrome driver: {e}")
-            if os.environ.get("DOCKER_ENV"):
-                logging.info("🔄 Thử fallback với standard ChromeDriver...")
-                from selenium import webdriver
-                from selenium.webdriver.chrome.service import Service
-                from selenium.webdriver.chrome.options import Options
-                
-                chrome_options = Options()
-                for arg in options.arguments: chrome_options.add_argument(arg)
-                if hasattr(options, 'binary_location'): chrome_options.binary_location = options.binary_location
-                
-                try:
-                    service = Service()
-                    driver = webdriver.Chrome(service=service, options=chrome_options)
-                    logging.info("✅ Fallback ChromeDriver đã khởi tạo thành công.")
-                except Exception as fallback_error:
-                    logging.error(f"❌ Fallback cũng thất bại: {fallback_error}")
-                    return
-            else:
-                return
-        
+        # NOTE 2: Kết nối DB một lần duy nhất
         conn = get_db_connection()
-        if not conn: return
+        if not conn: 
+            return
 
+        # Vòng lặp chính để xử lý các job
         while True:
+            # NOTE 3: Logic kiểm tra và (RE)START DRIVER
+            # Logic này sẽ chạy ở lần đầu tiên, hoặc khi đã xử lý đủ số job trong phiên
+            if driver is None or jobs_since_restart >= JOBS_PER_SESSION:
+                if driver:
+                    logging.info(f"--- Đã xử lý {jobs_since_restart} jobs. Khởi động lại trình duyệt để làm mới tài nguyên. ---")
+                    driver.quit()
+
+                # --- BẮT ĐẦU KHỐI KHỞI TẠO SELENIUM (GIỮ NGUYÊN 100% TỪ CODE CỦA BẠN) ---
+                options = uc.ChromeOptions()
+                options.add_argument(f'--user-agent={USER_AGENT}')
+                options.add_argument('--window-size=1920,1080')
+                options.add_argument('--disable-blink-features=AutomationControlled')
+
+                if os.environ.get("DOCKER_ENV"):
+                    logging.info("Detected DOCKER_ENV → force headless, no-sandbox, disable-gpu")
+                    options.add_argument('--headless=new')
+                    options.add_argument('--no-sandbox')
+                    options.add_argument('--disable-dev-shm-usage')
+                    options.add_argument('--disable-gpu')
+                    options.add_argument('--disable-web-security')
+                    options.add_argument('--allow-running-insecure-content')
+                    options.add_argument('--disable-features=VizDisplayCompositor')
+                else:
+                    local_headless = os.environ.get("LOCAL_HEADLESS", "false").lower() == "true"
+                    if local_headless:
+                        logging.info("Local run with headless mode enabled via LOCAL_HEADLESS=true")
+                        options.add_argument('--headless=new')
+                    else:
+                        logging.info("Local run without headless (for debugging in real browser window)")
+
+                options.add_argument('--disable-extensions')
+                options.add_argument('--disable-infobars')
+
+                chrome_executable_path = os.environ.get("CHROME_BIN")
+                if chrome_executable_path and os.path.exists(chrome_executable_path):
+                    logging.info(f"Chrome binary found at: {chrome_executable_path}")
+                    options.binary_location = chrome_executable_path
+
+                logging.info("🚀 (Re)Starting Chrome driver...")
+                try:
+                    if os.environ.get("DOCKER_ENV") and chrome_executable_path:
+                        driver = uc.Chrome(options=options, browser_executable_path=chrome_executable_path)
+                    else:
+                        driver = uc.Chrome(options=options)
+                    logging.info("✅ Chrome driver đã khởi tạo thành công.")
+                except Exception as e:
+                    logging.error(f"❌ Lỗi khởi tạo Chrome driver: {e}")
+                    if os.environ.get("DOCKER_ENV"):
+                        logging.info("🔄 Thử fallback với standard ChromeDriver...")
+                        from selenium import webdriver
+                        from selenium.webdriver.chrome.service import Service
+                        from selenium.webdriver.chrome.options import Options
+                        
+                        chrome_options = Options()
+                        for arg in options.arguments: chrome_options.add_argument(arg)
+                        if hasattr(options, 'binary_location'): chrome_options.binary_location = options.binary_location
+                        
+                        try:
+                            service = Service()
+                            driver = webdriver.Chrome(service=service, options=chrome_options)
+                            logging.info("✅ Fallback ChromeDriver đã khởi tạo thành công.")
+                        except Exception as fallback_error:
+                            logging.error(f"❌ Fallback cũng thất bại: {fallback_error}")
+                            return # Thoát hoàn toàn
+                    else:
+                        return # Thoát hoàn toàn
+                # --- HẾT KHỐI KHỞI TẠO SELENIUM ---
+
+                jobs_since_restart = 0 # Reset bộ đếm
+
+            # Lấy job từ DB (giữ nguyên logic của bạn)
             cur = conn.cursor()
             cur.execute(sql.SQL("SELECT job_id, job_url, source_site FROM {} WHERE status = 'pending_details' ORDER BY job_id LIMIT 1;").format(sql.Identifier(DB_TABLE_NAME)))
             job_to_process = cur.fetchone()
             cur.close()
 
-            # SỬA ĐỔI QUAN TRỌNG NHẤT ĐỂ DOCKERIZE: THÊM ĐIỂM DỪNG
+            # Điều kiện dừng khi hết job (giữ nguyên logic của bạn)
             if not job_to_process:
                 logging.info("[DONE] Không còn job nào ở trạng thái 'pending_details' để xử lý. Hoàn thành.")
-                break # Thoát khỏi vòng lặp while True
+                break
 
+            # Tăng bộ đếm của phiên làm việc
+            jobs_since_restart += 1
+            
             job_id, detail_url, source_site = job_to_process
             logging.info(f"[PROCESS] Job ID: {job_id} | URL: {detail_url[:70]}...")
 
+            # Xử lý brand job (giữ nguyên logic của bạn)
             if "/brand/" in detail_url:
                 logging.warning(f"[SKIP] Job ID {job_id} thuộc brand, bỏ qua.")
                 cur = conn.cursor()
@@ -266,6 +291,7 @@ def main_worker():
                 conn.commit(); cur.close()
                 continue
 
+            # Xử lý chi tiết job (giữ nguyên logic của bạn)
             config = load_config(source_site)
             if not config: continue
 
@@ -296,23 +322,38 @@ def main_worker():
                 cur = conn.cursor(); cur.execute(update_query, values); conn.commit(); cur.close()
                 logging.info(f"[OK] Đã cập nhật chi tiết Job ID: {job_id}")
 
+            except TimeoutException as e: # Bắt lỗi TimeoutException cụ thể
+                logging.error(f"[ERR] Lỗi Timeout khi xử lý Job ID {job_id}: {e}")
+                conn.rollback()
+                cur = conn.cursor()
+                cur.execute(sql.SQL("UPDATE {} SET status = 'error_timeout' WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME)), (job_id,))
+                conn.commit(); cur.close()
+                
+                # Buộc khởi động lại driver ở lần lặp sau
+                logging.info("Timeout xảy ra, buộc khởi động lại driver ở lần lặp kế tiếp.")
+                if driver: driver.quit() # Đảm bảo driver cũ được đóng
+                driver = None 
+                
             except Exception as e:
-                logging.error(f"[ERR] Lỗi Job ID {job_id}: {e}")
+                logging.error(f"[ERR] Lỗi không xác định ở Job ID {job_id}: {e}")
                 conn.rollback()
                 cur = conn.cursor()
                 cur.execute(sql.SQL("UPDATE {} SET status = 'error' WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME)), (job_id,))
                 conn.commit(); cur.close()
-
+            
+            # --- KHỐI SLEEP CUỐI CÙNG (GIỮ NGUYÊN TỪ CODE CỦA BẠN) ---
             sleep_time = round(random.uniform(25, 50), 2)
             logging.info(f"[SLEEP] Nghỉ {sleep_time}s trước khi xử lý job kế tiếp...")
             time.sleep(sleep_time)
 
     except Exception as e:
+        # NOTE 4: Đổi tên biến đếm để không bị lỗi "referenced before assignment"
+        # Bỏ except KeyboardInterrupt và gộp vào Exception chung
         logging.critical(f"[FATAL] Lỗi tổng thể không thể phục hồi: {e}", exc_info=True)
     finally:
+        # Khối dọn dẹp cuối cùng
         logging.info("---")
-        logging.info(f"[SUMMARY] Đã xử lý xong: {total_processed} jobs.")
-        logging.info(f"Số lỗi gặp phải: {total_errors}")
+        logging.info("[SUMMARY] Pipeline đã hoàn thành.")
         if driver:
             driver.quit()
             logging.info("Đã đóng trình duyệt Selenium.")
@@ -322,3 +363,4 @@ def main_worker():
 
 if __name__ == "__main__":
     main_worker()
+    
