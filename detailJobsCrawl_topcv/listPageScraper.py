@@ -103,6 +103,50 @@ def normalize_job_url(raw_url):
     # Tạo lại URL đã được chuẩn hóa, bỏ qua query và fragment
     return urlunsplit((scheme, netloc, path, '', ''))
 
+# --- THAY THẾ HOÀN TOÀN HÀM close_popups_if_present BẰNG PHIÊN BẢN NÀY ---
+
+def close_popups_if_present(driver, popup_config, timeout=15):
+    """
+    Chờ container của popup xuất hiện, sau đó tìm và click vào nút đóng bên trong nó.
+    """
+    if not popup_config or not popup_config.get("container") or not popup_config.get("close_button"):
+        logging.info("Cấu hình popup không đầy đủ. Bỏ qua.")
+        return
+
+    container_selector = popup_config["container"]
+    close_button_selector = popup_config["close_button"]
+
+    logging.info(f"Đang chờ container của popup ({container_selector}) xuất hiện trong {timeout}s...")
+    
+    try:
+        # === BƯỚC 1: CHỜ CONTAINER LỚN XUẤT HIỆN ===
+        # Dùng presence_of_element_located vì ta chỉ cần nó có trong DOM là đủ
+        popup_container = WebDriverWait(driver, timeout).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, container_selector))
+        )
+        logging.info("✅ Container của popup đã xuất hiện.")
+        
+        # Thêm một khoảng nghỉ ngắn để chờ animation (nếu có)
+        time.sleep(1)
+
+        # === BƯỚC 2: TÌM NÚT ĐÓNG BÊN TRONG CONTAINER ===
+        # Bây giờ, tìm nút đóng bên trong phần tử popup_container vừa tìm được.
+        # Điều này đảm bảo ta không click nhầm nút của phần tử khác.
+        close_button = popup_container.find_element(By.CSS_SELECTOR, close_button_selector)
+        
+        logging.info(f"Đã tìm thấy nút đóng ({close_button_selector}). Đang đóng popup...")
+        driver.execute_script("arguments[0].click();", close_button)
+        
+        logging.info("✅ Popup đã được đóng thành công.")
+        time.sleep(2) # Chờ animation đóng hoàn tất
+
+    except TimeoutException:
+        logging.info("Không tìm thấy container của popup. Coi như không có popup.")
+        pass
+    except Exception as e:
+        logging.error(f"Đã xảy ra lỗi khi cố gắng đóng popup: {e}")
+        pass
+
 def main():
     logging.info(f"[START] Quét danh sách jobs từ site: {SITE_NAME}")
     config = load_config(SITE_NAME)
@@ -111,12 +155,21 @@ def main():
     base_url = config['base_url']
     current_list_page_url = config['list_page_url']
     list_selectors = config['selectors']['list_page']
+    
+    # --- LẤY CẤU HÌNH POPUP TỪ CONFIG ---
+    popup_config = list_selectors.get("popup_handler")
 
     # --- OPTIONS CHROME / SELENIUM ---
     options = uc.ChromeOptions()
     options.add_argument(f'--user-agent={USER_AGENT}')
     options.add_argument('--window-size=1920,1080')
     options.add_argument('--disable-blink-features=AutomationControlled')
+
+    # --- THÊM DÒNG NÀY ĐỂ TẮT THÔNG BÁO TRÊN TRÌNH DUYỆT ---
+    # Tạo một dictionary để chứa các tùy chỉnh
+    prefs = {"profile.default_content_setting_values.notifications": 2}
+    # Thêm tùy chỉnh này vào options
+    options.add_experimental_option("prefs", prefs)
 
     # FIXED: Docker-specific Chrome configuration
     if os.environ.get("DOCKER_ENV"):
@@ -202,8 +255,18 @@ def main():
             logging.info(f"\n[PAGE {current_page}] Đang xử lý: {current_list_page_url}") # CHANGED
             try:
                 driver.get(current_list_page_url)
-                WebDriverWait(driver, 36).until(EC.presence_of_element_located((By.CSS_SELECTOR, list_selectors['job_item'])))
-                time.sleep(random.uniform(2, 4))
+                
+                # --- GỌI HÀM DỌN DẸP VỚI CẤU HÌNH MỚI ---
+                # Chúng ta gọi nó ngay từ đầu, nhưng với chiến thuật mới, nó sẽ tự chờ.
+                close_popups_if_present(driver, popup_config)
+
+                # Sau khi đã chắc chắn popup (nếu có) đã được đóng,
+                # ta mới chờ các job item.
+                WebDriverWait(driver, 20).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, list_selectors['job_item']))
+                )
+                
+                time.sleep(random.uniform(2, 4)) # Thêm một khoảng nghỉ ngắn sau khi đóng popup
                 soup = BeautifulSoup(driver.page_source, 'html.parser')
                 jobs = soup.select(list_selectors['job_item'])
 
@@ -250,9 +313,34 @@ def main():
                     else:
                         conn.commit()
                 cur.close()
-                logging.info(f"[OK] Thêm mới {insert_count} job từ trang này.") # CHANGED
+                logging.info(f"[OK] Thêm mới {insert_count} job từ trang này.") 
 
-                next_tag = soup.select_one(list_selectors['next_page_button'])
+                # Thay vì tìm nút "Next" ngay lập tức, chúng ta sẽ dùng WebDriverWait để
+                # đảm bảo nó đã được JavaScript render ra và sẵn sàng để click.
+
+                next_tag = None # Khởi tạo next_tag là None trước
+                try:
+                    logging.info("Đang chờ nút 'Next' sẵn sàng...")
+                    # Chờ tối đa 15 giây cho phần tử nút 'Next' có thể được click.
+                    # Nếu nó xuất hiện sớm hơn, Selenium sẽ tiếp tục ngay.
+                    WebDriverWait(driver, 15).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, list_selectors['next_page_button']))
+                    )
+                    
+                    # Nếu không có lỗi Timeout, có nghĩa là nút 'Next' đã tồn tại.
+                    # Bây giờ mới lấy page_source để parse một cách an toàn.
+                    soup_for_next_button = BeautifulSoup(driver.page_source, 'html.parser')
+                    next_tag = soup_for_next_button.select_one(list_selectors['next_page_button'])
+                    logging.info("✅ Nút 'Next' đã được tìm thấy.")
+
+                except TimeoutException:
+                    # Nếu sau 15 giây mà vẫn không tìm thấy nút 'Next',
+                    # thì đây mới thực sự là trang cuối cùng.
+                    logging.info("[DONE] Không tìm thấy nút 'Next' sau khi đã chờ. Đây là trang cuối.")
+                    # next_tag vẫn là None, vòng lặp sẽ tự động dừng ở dưới.
+
+
+                # --- LOGIC XỬ LÝ NÚT NEXT (GIỮ NGUYÊN) ---
                 if next_tag:
                     next_href = next_tag.get('data-href') or next_tag.get('href')
                     if not next_href or 'javascript:void(0)' in next_href:
@@ -260,12 +348,17 @@ def main():
                         break
                     current_list_page_url = urljoin(base_url, next_href)
                 else:
-                    logging.info("[DONE] Không tìm thấy nút 'Next'. Đã đến trang cuối.") # CHANGED
+                    # Nếu next_tag là None (do timeout hoặc không tìm thấy), thoát vòng lặp.
                     break
 
                 current_page += 1
-                time.sleep(random.uniform(6, 12))
 
+                # Vì đã có bước chờ thông minh ở trên, ta có thể giảm thời gian sleep "mù quáng"
+                # ở đây xuống. Nó chỉ còn tác dụng giảm tải cho server giữa các lần chuyển trang.
+                sleep_time = random.uniform(4, 8)
+                logging.info(f"Hành xử giống người: Nghỉ {sleep_time:.2f}s trước khi sang trang tiếp theo.")
+                time.sleep(sleep_time)
+                
             except TimeoutException:
                 logging.warning("Timeout trang, thử lại sau 20s...") # CHANGED
                 time.sleep(20)

@@ -11,7 +11,13 @@
         "salary": ".title-salary",
         "location": "label.address",
         "post_date": "label.label-update",
-        "next_page_button": "ul.pagination a[rel='next']"
+        "next_page_button": "ul.pagination a[rel='next']",
+
+        "//": "--- THÊM MỚI: Cấu hình xử lý popup ---",
+        "popup_handler": {
+          "container": "#popup-recruitment-report",
+          "close_button": "button.close"
+        }
       },
       "detail_page": {
         "wait_for_element": "div.job-detail__information-detail--content",
