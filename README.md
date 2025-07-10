@@ -45,32 +45,6 @@ Thu thập dữ liệu tin tuyển dụng (danh sách + chi tiết) từ TopCV.v
 - Crawl chi tiết tin tuyển dụng (detail page)
 - Lưu dữ liệu vào PostgreSQL
 - Tích hợp `.env` để quản lý cấu hình dễ dàng
-
----
-
-## 📌 Cấu trúc thư mục `detailJobsCrawl_topcv/`
-
-```
-detailJobsCrawl_topcv/
-│
-├── detailScraper.py         # Crawl chi tiết job
-├── listPageScraper.py       # Crawl danh sách job
-├── jobs_detailed.sql        # SQL tạo bảng trong PostgreSQL
-├── sites_config.json        # Selectors & cấu hình crawl
-├── scraper.log              # File log
-├── requirements.txt         # Danh sách Python package
-├── .env                     # Biến môi trường
-└── README.md                # Hướng dẫn sử dụng
-```
-
----
-
-## ⚙️ Yêu cầu
-
-- Python 3.8+
-- PostgreSQL (cài sẵn và đang chạy)
-- Tài khoản PostgreSQL có quyền kết nối và insert
-
 ---
 
 ## 💾 Database
@@ -93,19 +67,7 @@ cd detailJobsCrawl_topcv
 
 ### 2️⃣ Tạo file `.env`
 
-Với nội dung mẫu:
-
-```env
-DB_NAME=your_database_name
-DB_USER=your_username
-DB_PASSWORD=your_password
-DB_HOST=localhost
-DB_PORT=5432
-
-USER_AGENT=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36
-```
-
-📌 Thay thế giá trị theo cấu hình của bạn.
+Với nội dung tương tự như ở file .env.example. Và, nhớ thay thế giá trị theo cấu hình của bạn.
 
 ---
 
@@ -152,9 +114,8 @@ python3 detailScraper.py
 ---
 
 ## 🗃️ File log
-- Log crawl nhanh các url lưu trong **list_scraper.log**
-- Log crawl thông tin chi tiết lưu trong **scraper.log** để dễ debug
-- Có log trạng thái, lỗi kết nối, lỗi selector
+- /detailJobsCrawl_topcv/detail_scraper.log
+- Có log trạng thái, lỗi kết nối, lỗi selector, ..., mọi log như 1 terminal
 
 ---
 
