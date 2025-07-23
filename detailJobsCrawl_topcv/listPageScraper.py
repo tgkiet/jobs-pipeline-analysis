@@ -29,7 +29,7 @@ logging.basicConfig(
 # --- Configuration ---
 load_dotenv()
 DB_TABLE_NAME = 'topcv_jobs_detailed'
-MAX_PAGES_TO_SCRAPE = 10 
+MAX_PAGES_TO_SCRAPE = 20 
 USER_AGENT = os.getenv('USER_AGENT')
 SITE_NAME = "topcv"
 

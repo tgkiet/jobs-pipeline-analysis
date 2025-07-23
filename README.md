@@ -1,5 +1,5 @@
-# 📊 The First Personal Project: Phân tích Thị trường Việc làm tại TP.HCM
-# 📊 Phân tích Thị trường Việc làm tại TP.HCM là dự án cá nhân giúp sinh viên và nhà tuyển dụng hiểu rõ hơn nhu cầu tuyển dụng tại Việt Nam thông qua dữ liệu thật từ TopCV
+# The First Personal Project: Phân tích Thị trường Việc làm tại TP.HCM
+# Phân tích Thị trường Việc làm tại TP.HCM là dự án cá nhân giúp sinh viên và nhà tuyển dụng hiểu rõ hơn nhu cầu tuyển dụng tại TP.HCM thông qua dữ liệu thật từ TopCV
 
 **Roles:** Data Engineer, Data Analyst
 
@@ -18,7 +18,6 @@
     → Crawl chi tiết nhiều job với 2 phiên bản
         ver1: All-in-one notebook (dễ bắt đầu, khó scale)
         ver2: Modular scripts (dễ mở rộng, dễ bảo trì)
-
 /detailJobsCrawl_topcv
     → Tách biệt rõ các luồng xử lý, dễ mở rộng cho nhiều website khác
 ```
@@ -33,9 +32,8 @@
 ---
 
 # 📦 detailJobsCrawl_topcv
-
 **Vietnam Job Scraper for TopCV.vn**  
-Thu thập dữ liệu tin tuyển dụng (danh sách + chi tiết) từ TopCV.vn và lưu vào PostgreSQL để phục vụ phân tích nhu cầu việc làm tại Việt Nam.
+Thu thập dữ liệu tin tuyển dụng (danh sách + chi tiết) từ TopCV.vn và lưu vào PostgreSQL để phục vụ phân tích nhu cầu việc làm tại TP.HCM.
 
 ---
 
@@ -85,8 +83,8 @@ pip install -r requirements.txt
 
 ```sh
 python3 listPageScraper.py
-```
 
+```
 - Thu thập danh sách job URL
 - Lưu vào PostgreSQL với `status = 'pending_details'`
 
