@@ -196,9 +196,19 @@ def main():
 
     # FIXED: Chrome binary detection and driver initialization
     chrome_executable_path = os.environ.get("CHROME_BIN")
+    chrome_main_version = None
     if chrome_executable_path and os.path.exists(chrome_executable_path):
         logging.info(f"Chrome binary found at: {chrome_executable_path}")
         options.binary_location = chrome_executable_path
+        try:
+            import subprocess, re
+            output = subprocess.check_output([chrome_executable_path, '--version']).decode('utf-8')
+            match = re.search(r'(\d+)\.', output)
+            if match:
+                chrome_main_version = int(match.group(1))
+                logging.info(f"Đã phát hiện Chrome version chính: {chrome_main_version}")
+        except Exception as e:
+            logging.warning(f"Không thể tự động đọc version Chrome: {e}")
 
     logging.info("🚀 Chuẩn bị khởi tạo Chrome driver...")
     
@@ -208,11 +218,12 @@ def main():
             # In Docker, explicitly specify the browser executable path
             driver = uc.Chrome(
                 options=options,
-                browser_executable_path=chrome_executable_path
+                browser_executable_path=chrome_executable_path,
+                version_main=chrome_main_version
             )
         else:
             # Local development - let undetected-chromedriver auto-detect
-            driver = uc.Chrome(options=options)
+            driver = uc.Chrome(options=options, version_main=chrome_main_version)
         
         logging.info("✅ Chrome driver đã khởi tạo thành công.")
     except Exception as e:

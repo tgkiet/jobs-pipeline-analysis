@@ -230,16 +230,26 @@ def main_worker():
                 options.add_argument('--disable-infobars')
 
                 chrome_executable_path = os.environ.get("CHROME_BIN")
+                chrome_main_version = None
                 if chrome_executable_path and os.path.exists(chrome_executable_path):
                     logging.info(f"Chrome binary found at: {chrome_executable_path}")
                     options.binary_location = chrome_executable_path
+                    try:
+                        import subprocess, re
+                        output = subprocess.check_output([chrome_executable_path, '--version']).decode('utf-8')
+                        match = re.search(r'(\d+)\.', output)
+                        if match:
+                            chrome_main_version = int(match.group(1))
+                            logging.info(f"Đã phát hiện Chrome version chính: {chrome_main_version}")
+                    except Exception as e:
+                        logging.warning(f"Không thể tự động đọc version Chrome: {e}")
 
                 logging.info("🚀 (Re)Starting Chrome driver...")
                 try:
                     if os.environ.get("DOCKER_ENV") and chrome_executable_path:
-                        driver = uc.Chrome(options=options, browser_executable_path=chrome_executable_path)
+                        driver = uc.Chrome(options=options, browser_executable_path=chrome_executable_path, version_main=chrome_main_version)
                     else:
-                        driver = uc.Chrome(options=options)
+                        driver = uc.Chrome(options=options, version_main=chrome_main_version)
                     logging.info("✅ Chrome driver đã khởi tạo thành công.")
                 except Exception as e:
                     logging.error(f"❌ Lỗi khởi tạo Chrome driver: {e}")
@@ -299,6 +309,16 @@ def main_worker():
 
             try:
                 driver.get(detail_url)
+                
+                # KIỂM TRA NHANH: Job đã hết hạn hoặc bị xoá
+                page_source_lower = driver.page_source.lower()
+                if "không tìm thấy" in page_source_lower or "đã hết hạn" in page_source_lower or driver.current_url == "https://www.topcv.vn/":
+                    logging.warning(f"[SKIP] Job ID {job_id} đã hết hạn/bị xoá (Redirect về trang chủ hoặc text 404).")
+                    cur = conn.cursor()
+                    cur.execute(sql.SQL("UPDATE {} SET status = 'expired' WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME)), (job_id,))
+                    conn.commit(); cur.close()
+                    continue
+
                 logging.info("[WAIT] Chờ tải trang trong 30s...")
                 WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, detail_cfg['wait_for_element'])))
                 sleep_time = round(random.uniform(2, 4), 2)
