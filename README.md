@@ -115,6 +115,10 @@ python3 detailScraper.py
 - /detailJobsCrawl_topcv/detail_scraper.log
 - Có log trạng thái, lỗi kết nối, lỗi selector, ..., mọi log như 1 terminal
 
+## NOTE:
+
+#### Hiện tại project crawl data từ TopCV này vẫn có thể bị chặn bởi hệ thống anti-bot của TopCV khi chuyển sang crawl chi tiết từng job (detailScraper.py). Còn logic crawl tổng hợp (listPageScraper.py) thì vẫn hoạt động tốt.
+
 ---
 
 ## ✨ Author
