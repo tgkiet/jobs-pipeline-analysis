@@ -278,7 +278,14 @@ def main_worker():
 
             # Lấy job từ DB (giữ nguyên logic của bạn)
             cur = conn.cursor()
-            cur.execute(sql.SQL("SELECT job_id, job_url, source_site FROM {} WHERE status = 'pending_details' ORDER BY job_id LIMIT 1;").format(sql.Identifier(DB_TABLE_NAME)))
+            cur.execute(sql.SQL("""
+                SELECT job_id, job_url, source_site 
+                FROM {} 
+                WHERE status = 'pending_details' 
+                ORDER BY job_id     
+                FOR UPDATE SKIP LOCKED 
+                LIMIT 1;
+            """).format(sql.Identifier(DB_TABLE_NAME)))
             job_to_process = cur.fetchone()
             cur.close()
 
@@ -312,8 +319,13 @@ def main_worker():
                 
                 # KIỂM TRA NHANH: Job đã hết hạn hoặc bị xoá
                 page_source_lower = driver.page_source.lower()
-                if "không tìm thấy" in page_source_lower or "đã hết hạn" in page_source_lower or driver.current_url == "https://www.topcv.vn/":
-                    logging.warning(f"[SKIP] Job ID {job_id} đã hết hạn/bị xoá (Redirect về trang chủ hoặc text 404).")
+                current_url_lower = driver.current_url.lower()
+
+                # Nếu bị đẩy về trang chủ, trang search, hoặc đổi hẳn URL (không còn là trang chi tiết việc làm)
+                is_redirected = detail_url.lower() != current_url_lower and ("/tim-viec-lam" in current_url_lower or current_url_lower.endswith(".vn/"))
+                
+                if "không tìm thấy" in page_source_lower or "đã hết hạn" in page_source_lower or is_redirected:
+                    logging.warning(f"[SKIP] Job ID {job_id} đã hết hạn/bị xoá (Redirect qua URL: {driver.current_url} hoặc tự báo lỗi).")
                     cur = conn.cursor()
                     cur.execute(sql.SQL("UPDATE {} SET status = 'expired' WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME)), (job_id,))
                     conn.commit(); cur.close()
@@ -343,7 +355,17 @@ def main_worker():
                 logging.info(f"[OK] Đã cập nhật chi tiết Job ID: {job_id}")
 
             except TimeoutException as e: # Bắt lỗi TimeoutException cụ thể
-                logging.error(f"[ERR] Lỗi Timeout khi xử lý Job ID {job_id}: {e}")
+                logging.error(f"[ERR] Lỗi Timeout khi xử lý Job ID {job_id}.")
+                
+                # BẪY TÌM LỖI (DEBUG) ĐỂ BIẾT TẠI SAO TIMEOUT
+                try:
+                    logging.info(f"👉 [DEBUG TIMEOUT] URL thực tế lúc lỗi: {driver.current_url}")
+                    logging.info(f"👉 [DEBUG TIMEOUT] Title trang: {driver.title}")
+                    if "xác nhận" in driver.title.lower() or "captcha" in driver.current_url.lower() or "robot" in driver.page_source.lower()[:2000]:
+                        logging.error("🚨 PHÁT HIỆN HỆ THỐNG ANTI-BOT (DATADOME/CAPTCHA) CHẶN!")
+                except Exception:
+                    pass
+
                 conn.rollback()
                 cur = conn.cursor()
                 cur.execute(sql.SQL("UPDATE {} SET status = 'error_timeout' WHERE job_id = %s;").format(sql.Identifier(DB_TABLE_NAME)), (job_id,))
